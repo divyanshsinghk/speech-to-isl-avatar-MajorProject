@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+*.wav
+*.webm
+.idea/backend/credentials.json
+backend/credentials.json
+backend/credentials.json
+.idea/
+__pycache__/
+venv/

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Speech → ISL</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+      padding: 30px;
+    }
+
+    button {
+      padding: 15px 25px;
+      font-size: 18px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      margin: 10px;
+    }
+
+    #mic {
+      background: #22c55e;
+    }
+
+    #mic.recording {
+      background: #ef4444;
+    }
+
+    iframe {
+      width: 500px;
+      height: 300px;
+      border-radius: 12px;
+      margin-top: 20px;
+    }
+
+    img {
+      width: 90px;
+      margin: 5px;
+    }
+
+    .tokens span {
+      background: #1e293b;
+      padding: 6px 10px;
+      margin: 4px;
+      border-radius: 8px;
+      display: inline-block;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🎤 Speech → ISL</h1>
+
+<button id="mic">Start Recording</button>
+
+<p id="status"></p>
+<p id="text"></p>
+<div class="tokens" id="tokens"></div>
+
+<div id="player"></div>
+
+<script>
+let mediaRecorder;
+let audioChunks = [];
+let isRecording = false;
+
+const micBtn = document.getElementById("mic");
+const status = document.getElementById("status");
+const textEl = document.getElementById("text");
+const tokensEl = document.getElementById("tokens");
+const player = document.getElementById("player");
+
+
+// 🎤 RECORD
+micBtn.onclick = async () => {
+
+  if (!isRecording) {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = sendAudio;
+
+    mediaRecorder.start();
+
+    isRecording = true;
+    micBtn.classList.add("recording");
+    micBtn.innerText = "Stop";
+    status.innerText = "Listening...";
+
+  } else {
+    mediaRecorder.stop();
+
+    isRecording = false;
+    micBtn.classList.remove("recording");
+    micBtn.innerText = "Start Recording";
+    status.innerText = "Processing...";
+  }
+};
+
+
+// 📡 SEND AUDIO
+async function sendAudio() {
+
+  const blob = new Blob(audioChunks, { type: "audio/webm" });
+
+  const formData = new FormData();
+  formData.append("audio", blob, "input.webm");
+
+  const res = await fetch("/translate", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+
+  console.log("VIDEOS:", data.videos);
+
+  renderResult(data);
+}
+
+
+// 🧠 DISPLAY
+function renderResult(data) {
+
+  textEl.innerText = "📝 " + data.text;
+
+  tokensEl.innerHTML = "";
+  data.tokens.forEach(t => {
+    const span = document.createElement("span");
+    span.innerText = t;
+    tokensEl.appendChild(span);
+  });
+
+  playQueue(data.tokens, data.videos);
+}
+
+
+// 🎬 PLAYBACK
+function playQueue(tokens, videos) {
+
+  let queue = [];
+
+  tokens.forEach(token => {
+    if (videos[token]) {
+      queue.push({ type: "video", url: videos[token] });
+    } else {
+      queue.push({ type: "fingerspell", word: token });
+    }
+  });
+
+  playNext(queue);
+}
+
+
+// 🔁 NEXT
+function playNext(queue) {
+
+  if (queue.length === 0) return;
+
+  const item = queue.shift();
+  player.innerHTML = "";
+
+  if (item.type === "video") {
+
+    console.log("Playing:", item.url);
+
+    const iframe = document.createElement("iframe");
+
+    iframe.src = item.url;
+    iframe.setAttribute("allow", "autoplay; encrypted-media");
+    iframe.setAttribute("allowfullscreen", "");
+
+    player.appendChild(iframe);
+
+    setTimeout(() => playNext(queue), 3500);
+
+  } else {
+    playFingerspelling(item.word, () => playNext(queue));
+  }
+}
+
+
+// ✋ FINGERSPELLING
+function playFingerspelling(word, done) {
+
+  let i = 0;
+
+  function next() {
+
+    if (i >= word.length) {
+      done();
+      return;
+    }
+
+    player.innerHTML = "";
+
+    const img = document.createElement("img");
+    img.src = "/fingerspelling_images/" + word[i].toLowerCase() + ".png";
+
+    player.appendChild(img);
+
+    i++;
+    setTimeout(next, 400);
+  }
+
+  next();
+}
+
+</script>
+
+</body>
+</html>
