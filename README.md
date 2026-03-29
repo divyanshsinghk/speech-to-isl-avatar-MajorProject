@@ -2,8 +2,6 @@
 
 ### AI-Based Speech to Indian Sign Language (ISL) Translation System
 
----
-
 ##  Overview
 
 This project presents a **Speech-to-Indian Sign Language (ISL) translation system** designed to bridge the communication gap between spoken language users and the deaf community.
@@ -167,13 +165,6 @@ python app.py
 
 * Divyansh Singh
 * Rohnit Sethi
-
----
-
-##  Research Paper
-
-Refer to the full research paper for detailed methodology and evaluation:
-(Attach your paper PDF here in repo)
 
 ---
 
